@@ -21,6 +21,7 @@ namespace IMcorrectionTool
     /// </summary>
     public partial class MainWindow : Window
     {
+        delegate void UpdateProgressBarDelegate(DependencyProperty dp, object value);
         List<Warming> WarningListCurrentMonth { get; set; }
         List<Warming> WarningListLastMonth { get; set; }
         List<Warming> WarningListKGID { get; set; }
@@ -30,6 +31,7 @@ namespace IMcorrectionTool
         {
             InitializeComponent();
             WarningListItog = new List<Warming>();
+            updProgress = new UpdateProgressBarDelegate(progressBar.SetValue);
         }
         private void InsertRDUResult(string RduName)
         {
@@ -51,33 +53,42 @@ namespace IMcorrectionTool
                         }
                     }
                 }
-               
+
             }
         }
         private void CopyPreviousCommentsToCurren()
         {
-            foreach(var wrn in WarningListLastMonth)
+            UpdateProgressBarDelegate updProgress = new UpdateProgressBarDelegate(progressBar.SetValue);
+            double value = 0;
+            progressBar.Maximum = WarningListLastMonth.Count;
+            Task.Run(() =>
             {
-                var curr = WarningListCurrentMonth.Where(x => x.ID == wrn.ID).FirstOrDefault();
-                if (curr != null)
+                foreach (var wrn in WarningListLastMonth)
                 {
-                    curr.IsNewInMonth = false;
-                    curr.PreviousComment = wrn.Comment;
+                    Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, ++value });
+                    var curr = WarningListCurrentMonth.Where(x => x.ID == wrn.ID).FirstOrDefault();
+                    if (curr != null)
+                    {
+                        curr.IsNewInMonth = false;
+                        curr.PreviousComment = wrn.Comment;
+                    }
                 }
-            }
+                value = 0;
+                Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
+            });
         }
-        private void CopyPreviousCommentsToKGIG()
-        {
-            foreach (var wrn in WarningListLastMonth)
-            {
-                var curr = WarningListCurrentMonth.Where(x => x.ID == wrn.ID).FirstOrDefault();
-                if (curr != null)
-                {
-                    curr.IsNewInMonth = false;
-                    curr.PreviousComment = wrn.Comment;
-                }
-            }
-        }
+        //private void CopyPreviousCommentsToKGIG()
+        //{
+        //    foreach (var wrn in WarningListLastMonth)
+        //    {
+        //        var curr = WarningListCurrentMonth.Where(x => x.ID == wrn.ID).FirstOrDefault();
+        //        if (curr != null)
+        //        {
+        //            curr.IsNewInMonth = false;
+        //            curr.PreviousComment = wrn.Comment;
+        //        }
+        //    }
+        //}
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
@@ -92,12 +103,12 @@ namespace IMcorrectionTool
                 dataGridWarning.ItemsSource = WarningListCurrentMonth;
                 currentMonthSatus.Items.Clear();
                 currentMonthSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListCurrentMonth.Count()}" });
-               
+
                 foreach (var dc in WarningListCurrentMonth.Select(x => x.ModelingAuthoritySet).Distinct())
                 {
                     currentMonthSatus.Items.Add(new Separator());
-                    currentMonthSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListCurrentMonth.Count(x=>x.ModelingAuthoritySet==dc)}" });
-                 
+                    currentMonthSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListCurrentMonth.Count(x => x.ModelingAuthoritySet == dc)}" });
+
                 }
             }
 
@@ -163,66 +174,68 @@ namespace IMcorrectionTool
             }
             else
             {
-                MessageBox.Show("Файл текущего или прошлого месяца не выбран или не содержит записей. Перенос не выполнен.","Ошибка");
+                MessageBox.Show("Файл текущего или прошлого месяца не выбран или не содержит записей. Перенос не выполнен.", "Ошибка");
             }
         }
-
+        private UpdateProgressBarDelegate updProgress;
+        private double value;
         private void button5_Click(object sender, RoutedEventArgs e)
         {
             currentMonthSatus.Items.Clear();
             currentMonthSatus.Items.Add(new TextBlock() { Text = $"Формирование итога..." });
-
             WarningListItog = new List<Warming>();
-            
-            foreach (var wrn in WarningListCurrentMonth)
+            value = 0;
+            progressBar.Maximum = WarningListCurrentMonth.Count + WarningListKGID.Count;
+            Task.Run(() => 
             {
-                WarningListItog.Add(wrn);
-                var lastMonthWrn = WarningListLastMonth?.Where(x => x.ID == wrn.ID).FirstOrDefault();
-                if (lastMonthWrn != null)
-                    wrn.PreviousComment = lastMonthWrn.Comment;
-
-                var kgidWrn = WarningListKGID.Where(x => x.ID == wrn.ID).FirstOrDefault();
-                if (kgidWrn != null)
+                foreach (var wrn in WarningListCurrentMonth)
                 {
-                    wrn.IsCorrectedInKGID = false;
-                    wrn.Comment = kgidWrn.Comment;
-                }
-                else
-                {
-                    wrn.IsCorrectedInKGID = true;
-                    wrn.Comment = "Устранено";
-                }
-
-            }
-
-            foreach (var wrn in WarningListKGID)
-            {
-                var currMonthWrn = WarningListCurrentMonth.Where(x => x.ID == wrn.ID).FirstOrDefault();
-                if (currMonthWrn == null)
-                {
-                    wrn.IsNewInKGID = true;
-                    wrn.IsCorrectedInKGID = false;
+                    Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, ++value });
                     WarningListItog.Add(wrn);
-                    
-                    
+                    var lastMonthWrn = WarningListLastMonth?.Where(x => x.ID == wrn.ID).FirstOrDefault();
+                    if (lastMonthWrn != null)
+                        wrn.PreviousComment = lastMonthWrn.Comment;
+
+                    var kgidWrn = WarningListKGID.Where(x => x.ID == wrn.ID).FirstOrDefault();
+                    if (kgidWrn != null)
+                    {
+                        wrn.IsCorrectedInKGID = false;
+                        wrn.Comment = kgidWrn.Comment;
+                    }
+                    else
+                    {
+                        wrn.IsCorrectedInKGID = true;
+                        wrn.Comment = "Устранено";
+                    }
+
                 }
-            }
-
+                foreach (var wrn in WarningListKGID)
+                {
+                    Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, ++value });
+                    var currMonthWrn = WarningListCurrentMonth.Where(x => x.ID == wrn.ID).FirstOrDefault();
+                    if (currMonthWrn == null)
+                    {
+                        wrn.IsNewInKGID = true;
+                        wrn.IsCorrectedInKGID = false;
+                        WarningListItog.Add(wrn);
+                    }
+                }
+            }).ContinueWith(SetDataGrid, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+        private void SetDataGrid(Task obj)
+        {
             dataGridWarningItog.ItemsSource = WarningListItog;
-
+            value = 0;
+            Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
             itogSatus.Items.Clear();
-            itogSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListItog.Count()} (Н:{WarningListItog.Count(x=>x.IsNewInKGID)} И:{WarningListItog.Count(x => x.IsCorrectedInKGID)})" });
+            itogSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListItog.Count()} (Н:{WarningListItog.Count(x => x.IsNewInKGID)} И:{WarningListItog.Count(x => x.IsCorrectedInKGID)})" });
 
             foreach (var dc in WarningListItog.Select(x => x.ModelingAuthoritySet).Distinct())
             {
                 itogSatus.Items.Add(new Separator());
-                
                 itogSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListItog.Count(x => x.ModelingAuthoritySet == dc)} (Н:{WarningListItog.Count(x => x.ModelingAuthoritySet == dc && x.IsNewInKGID)} И:{WarningListItog.Count(x => x.ModelingAuthoritySet == dc && x.IsCorrectedInKGID)})" });
-
             }
-
         }
-
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
             InsertRDUResult((sender as MenuItem).Header.ToString());
@@ -246,7 +259,7 @@ namespace IMcorrectionTool
                     WarningFarm.SaveToExcelBasedOnCurrentMonth(CurrentMonthFileName, filePath, WarningListItog);
                     MessageBox.Show("Сохранение успешно завершено", "Готово");
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message, "Ошибка при сохранении файла");
                 }

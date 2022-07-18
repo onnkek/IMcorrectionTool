@@ -13,7 +13,12 @@ namespace IMcorrectionTool
         {
             get
             {
-                return ObjectUID + Regex.Replace(WarningText, @"\w*id\W*[0-9]*", "Id=", RegexOptions.IgnoreCase).Trim();
+                string resultText = WarningText;
+                // Выборка строк, в которых есть id. Необходимо для ограничения количества
+                // строк, прогоняемых через регулярное выражение, ибо оно работает очень медленно.
+                if (WarningText.Contains("id"))
+                    resultText = Regex.Replace(WarningText, @"\w*id\W*[0-9]*", "Id=", RegexOptions.IgnoreCase).Trim();
+                return ObjectUID + resultText;
             }
         }
         public string ODU { get; set; }
