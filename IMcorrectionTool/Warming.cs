@@ -2,15 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace IMcorrectionTool
 {
     class Warming
     {
-        public string ID { get {
-                return ObjectUID + WarningText;
-            } }
+        public string ID
+        {
+            get
+            {
+                return ObjectUID + Regex.Replace(WarningText, @"\w*id\W*[0-9]*", "Id=", RegexOptions.IgnoreCase).Trim();
+            }
+        }
         public string ODU { get; set; }
         public string ModelingAuthoritySet { get; set; }
         public string RuleID { get; set; }
@@ -29,7 +34,7 @@ namespace IMcorrectionTool
         public bool IsCorrectedInKGID { get; set; }
 
 
-        public Warming(string odu,string modelingAuthoritySet, string ruleId, string objectUID, string objectName, string objectClass, string warningText, string commentText = "")
+        public Warming(string odu, string modelingAuthoritySet, string ruleId, string objectUID, string objectName, string objectClass, string warningText, string commentText = "")
         {
             ODU = odu;
             ModelingAuthoritySet = modelingAuthoritySet;

@@ -178,7 +178,8 @@ namespace IMcorrectionTool
             {
                 WarningListItog.Add(wrn);
                 var lastMonthWrn = WarningListLastMonth?.Where(x => x.ID == wrn.ID).FirstOrDefault();
-                if (lastMonthWrn != null) wrn.PreviousComment = lastMonthWrn.Comment;
+                if (lastMonthWrn != null)
+                    wrn.PreviousComment = lastMonthWrn.Comment;
 
                 var kgidWrn = WarningListKGID.Where(x => x.ID == wrn.ID).FirstOrDefault();
                 if (kgidWrn != null)
