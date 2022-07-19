@@ -314,7 +314,19 @@
                             <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">Сформировать итог</TextBlock>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="buttonexport" HorizontalContentAlignment="Left" HorizontalAlignment="Right" Margin="10,5,10,0" VerticalAlignment="Top" Width="165" Background="Transparent"  BorderThickness="0" Click="buttonExport_Click" >
+                    <Button x:Name="colorNew" HorizontalContentAlignment="Left" HorizontalAlignment="Left" Margin="180,5,10,0" VerticalAlignment="Top" Width="Auto" Background="Transparent"  BorderThickness="0" Click="colorNew_Click" >
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Ellipse x:Name="rectNew" Height="30" Width="30" Fill="Yellow" Stroke="#FF8690FA" StrokeThickness="1"/>
+                            <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">Цвет новых</TextBlock>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="colorOld" HorizontalContentAlignment="Left" HorizontalAlignment="Left" Margin="300,5,10,0" VerticalAlignment="Top" Width="Auto" Background="Transparent"  BorderThickness="0" Click="colorOld_Click" >
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Ellipse x:Name="rectOld" Height="30" Width="30" Fill="Plum" Stroke="#FF8690FA" StrokeThickness="1"/>
+                            <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">Цвет старых</TextBlock>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="buttonexport" HorizontalContentAlignment="Left" HorizontalAlignment="Right" Margin="10,5,10,0" VerticalAlignment="Top" Width="165" Background="Transparent"  BorderThickness="0" Click="buttonExport_Click">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                             <Image Source="Pictures/documentB.png"  Height="30"/>
                             <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">Экспорт результатов</TextBlock>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace IMcorrectionTool
@@ -18,6 +19,8 @@ namespace IMcorrectionTool
         public static Dispatcher dispatcher;
         public static UpdateProgressBarDelegate updProgress;
         public static double value;
+        public static System.Drawing.Color colorNewWarning;
+        public static System.Drawing.Color colorOldWarning;
         List<Warming> WarningListCurrentMonth { get; set; }
         List<Warming> WarningListLastMonth { get; set; }
         List<Warming> WarningListKGID { get; set; }
@@ -29,6 +32,8 @@ namespace IMcorrectionTool
             WarningListItog = new List<Warming>();
             updProgress = new UpdateProgressBarDelegate(progressBar.SetValue);
             dispatcher = Dispatcher.CurrentDispatcher;
+            colorNewWarning = System.Drawing.Color.Yellow;
+            colorOldWarning = System.Drawing.Color.Plum;
         }
         private void InsertRDUResult(string RduName)
         {
@@ -282,6 +287,26 @@ namespace IMcorrectionTool
                 {
                     MessageBox.Show(ex.Message, "Ошибка при сохранении файла");
                 }
+            }
+        }
+
+        private void colorNew_Click(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Forms.ColorDialog colorDialog = new System.Windows.Forms.ColorDialog();
+            if (colorDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                colorNewWarning = colorDialog.Color;
+                rectNew.Fill = new SolidColorBrush(Color.FromArgb(colorDialog.Color.A, colorDialog.Color.R, colorDialog.Color.G, colorDialog.Color.B));
+            }
+        }
+
+        private void colorOld_Click(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Forms.ColorDialog colorDialog = new System.Windows.Forms.ColorDialog();
+            if (colorDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                colorOldWarning = colorDialog.Color;
+                rectOld.Fill = new SolidColorBrush(Color.FromArgb(colorDialog.Color.A, colorDialog.Color.R, colorDialog.Color.G, colorDialog.Color.B));
             }
         }
     }

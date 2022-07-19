@@ -240,8 +240,8 @@ namespace IMcorrectionTool
                     string resultText = myvalues.GetValue(i, 7).ToString();
                     // Выборка строк, в которых есть id. Необходимо для ограничения количества
                     // строк, прогоняемых через регулярное выражение, ибо оно работает очень медленно.
-                    if (myvalues.GetValue(i, 7).ToString().Contains("Id") || 
-                        myvalues.GetValue(i, 7).ToString().Contains("id") || 
+                    if (myvalues.GetValue(i, 7).ToString().Contains("Id") ||
+                        myvalues.GetValue(i, 7).ToString().Contains("id") ||
                         myvalues.GetValue(i, 7).ToString().Contains("ID"))
                         resultText = Regex.Replace(myvalues.GetValue(i, 7).ToString(), @"\W*id\W*[0-9]*\W*", "Id=", RegexOptions.IgnoreCase).Trim();
                     var id = myvalues.GetValue(i, 4).ToString() + resultText;
@@ -252,7 +252,7 @@ namespace IMcorrectionTool
                         if (!string.IsNullOrEmpty(wrn.Comment))
                             writeValues[i - 1, 0] = wrn.Comment;
                         if (wrn.Comment != "Устранено" && wrn.IsNewInMonth == false)
-                            xlWorksheet.get_Range("A" + (i).ToString(), "H" + (i).ToString()).Interior.Color = ColorTranslator.ToOle(Color.Plum);
+                            xlWorksheet.get_Range("A" + (i).ToString(), "H" + (i).ToString()).Interior.Color = ColorTranslator.ToOle(MainWindow.colorOldWarning);
                     }
                 }
             }
@@ -260,27 +260,47 @@ namespace IMcorrectionTool
             // writeRange.Value = 
             var newWarnings = WarningList.Where(x => x.IsNewInKGID).ToList();
 
-            for (int i = 1; i <= newWarnings.Count(); i++)
+            string[,] newWar = new string[newWarnings.Count, 8];
+            Excel.Range newWarningsRange = xlWorksheet.get_Range("A" + (lastUsedRow + 1).ToString(), "H" + (lastUsedRow + newWarnings.Count).ToString());
+            for (int i = 0; i < newWar.GetLength(0); i++)
             {
                 MainWindow.dispatcher.Invoke(MainWindow.updProgress, new object[] { ProgressBar.ValueProperty, ++MainWindow.value });
-                xlWorksheet.Cells[i + lastUsedRow, 1].Value2 = newWarnings[i - 1].ODU;
-                xlWorksheet.Cells[i + lastUsedRow, 2].Value2 = newWarnings[i - 1].ModelingAuthoritySet;
-                xlWorksheet.Cells[i + lastUsedRow, 3].Value2 = newWarnings[i - 1].RuleID;
-                xlWorksheet.Cells[i + lastUsedRow, 4].Value2 = newWarnings[i - 1].ObjectUID;
-                xlWorksheet.Cells[i + lastUsedRow, 5].Value2 = newWarnings[i - 1].ObjectName;
-                xlWorksheet.Cells[i + lastUsedRow, 6].Value2 = newWarnings[i - 1].ObjectName;
-                xlWorksheet.Cells[i + lastUsedRow, 7].Value2 = newWarnings[i - 1].WarningText;
-                xlWorksheet.Cells[i + lastUsedRow, 8].Value2 = newWarnings[i - 1].PreviousComment;
-                if (!string.IsNullOrEmpty(newWarnings[i - 1].Comment))
-                {
-                    xlWorksheet.Cells[i + lastUsedRow, 8].Value2 = newWarnings[i - 1].Comment;
-                }
-
-
-                xlWorksheet.get_Range("A" + (i + lastUsedRow).ToString(), "H" + (i + lastUsedRow).ToString()).Interior.Color = ColorTranslator.ToOle(Color.Yellow);
+                newWar[i, 0] = newWarnings[i].ODU;
+                newWar[i, 1] = newWarnings[i].ModelingAuthoritySet;
+                newWar[i, 2] = newWarnings[i].RuleID;
+                newWar[i, 3] = newWarnings[i].ObjectUID;
+                newWar[i, 4] = newWarnings[i].ObjectName;
+                newWar[i, 5] = newWarnings[i].ObjectName;
+                newWar[i, 6] = newWarnings[i].WarningText;
+                newWar[i, 7] = newWarnings[i].PreviousComment;
+                xlWorksheet.get_Range("A" + (i + 1 + lastUsedRow).ToString(), "H" + (i + 1 + lastUsedRow).ToString()).Interior.Color = ColorTranslator.ToOle(MainWindow.colorNewWarning);
             }
-
+            newWarningsRange.Value2 = newWar;
+            xlWorksheet.Cells[1, 8].Value = "Комментарий ОДУ";
             xlWorksheet.get_Range("A1", "H" + (lastUsedRow + newWarnings.Count).ToString()).Cells.Borders.LineStyle = Excel.XlLineStyle.xlContinuous;
+
+
+            //for (int i = 1; i <= newWarnings.Count(); i++)
+            //{
+            //    MainWindow.dispatcher.Invoke(MainWindow.updProgress, new object[] { ProgressBar.ValueProperty, ++MainWindow.value });
+            //    xlWorksheet.Cells[i + lastUsedRow, 1].Value2 = newWarnings[i - 1].ODU;
+            //    xlWorksheet.Cells[i + lastUsedRow, 2].Value2 = newWarnings[i - 1].ModelingAuthoritySet;
+            //    xlWorksheet.Cells[i + lastUsedRow, 3].Value2 = newWarnings[i - 1].RuleID;
+            //    xlWorksheet.Cells[i + lastUsedRow, 4].Value2 = newWarnings[i - 1].ObjectUID;
+            //    xlWorksheet.Cells[i + lastUsedRow, 5].Value2 = newWarnings[i - 1].ObjectName;
+            //    xlWorksheet.Cells[i + lastUsedRow, 6].Value2 = newWarnings[i - 1].ObjectName;
+            //    xlWorksheet.Cells[i + lastUsedRow, 7].Value2 = newWarnings[i - 1].WarningText;
+            //    xlWorksheet.Cells[i + lastUsedRow, 8].Value2 = newWarnings[i - 1].PreviousComment;
+            //    if (!string.IsNullOrEmpty(newWarnings[i - 1].Comment))
+            //    {
+            //        xlWorksheet.Cells[i + lastUsedRow, 8].Value2 = newWarnings[i - 1].Comment;
+            //    }
+
+
+            //    xlWorksheet.get_Range("A" + (i + lastUsedRow).ToString(), "H" + (i + lastUsedRow).ToString()).Interior.Color = ColorTranslator.ToOle(Color.Yellow);
+            //}
+
+
 
             //for (int i = 1; i <= lastUsedRow; i++)
             //{
@@ -355,7 +375,7 @@ namespace IMcorrectionTool
             Marshal.ReleaseComObject(xlApp);
 
 
-            
+
 
         }
     }
