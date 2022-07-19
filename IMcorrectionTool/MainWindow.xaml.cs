@@ -2,17 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace IMcorrectionTool
 {
@@ -21,7 +14,10 @@ namespace IMcorrectionTool
     /// </summary>
     public partial class MainWindow : Window
     {
-        delegate void UpdateProgressBarDelegate(DependencyProperty dp, object value);
+        public delegate void UpdateProgressBarDelegate(DependencyProperty dp, object value);
+        public static Dispatcher dispatcher;
+        public static UpdateProgressBarDelegate updProgress;
+        public static double value;
         List<Warming> WarningListCurrentMonth { get; set; }
         List<Warming> WarningListLastMonth { get; set; }
         List<Warming> WarningListKGID { get; set; }
@@ -32,6 +28,7 @@ namespace IMcorrectionTool
             InitializeComponent();
             WarningListItog = new List<Warming>();
             updProgress = new UpdateProgressBarDelegate(progressBar.SetValue);
+            dispatcher = Dispatcher.CurrentDispatcher;
         }
         private void InsertRDUResult(string RduName)
         {
@@ -75,7 +72,12 @@ namespace IMcorrectionTool
                 }
                 value = 0;
                 Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
-            });
+            }).ContinueWith(CallbackUpdate, TaskScheduler.FromCurrentSynchronizationContext()); ;
+        }
+        private void CallbackUpdate(Task obj)
+        {
+            dataGridWarning.ItemsSource = null;
+            dataGridWarning.ItemsSource = WarningListCurrentMonth;
         }
         //private void CopyPreviousCommentsToKGIG()
         //{
@@ -99,19 +101,26 @@ namespace IMcorrectionTool
                 currentMonthSatus.Items.Clear();
                 currentMonthSatus.Items.Add(new TextBlock() { Text = $"Загрузка файла..." });
                 CurrentMonthFileName = openFileDialog.FileName;
-                WarningListCurrentMonth = WarningFarm.GetWarningListFromCduFormatExcel(CurrentMonthFileName);
-                dataGridWarning.ItemsSource = WarningListCurrentMonth;
-                currentMonthSatus.Items.Clear();
-                currentMonthSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListCurrentMonth.Count()}" });
-
-                foreach (var dc in WarningListCurrentMonth.Select(x => x.ModelingAuthoritySet).Distinct())
-                {
-                    currentMonthSatus.Items.Add(new Separator());
-                    currentMonthSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListCurrentMonth.Count(x => x.ModelingAuthoritySet == dc)}" });
-
-                }
+                progressBar.Maximum = System.IO.File.ReadAllLines(CurrentMonthFileName).Length;
+                Task.Run(() => { WarningListCurrentMonth = WarningFarm.GetWarningListFromCduFormatExcel(CurrentMonthFileName); })
+                        .ContinueWith(CallbackButton, TaskScheduler.FromCurrentSynchronizationContext());
+                
             }
+        }
+        private void CallbackButton(Task obj)
+        {
+            value = 0;
+            Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
+            dataGridWarning.ItemsSource = WarningListCurrentMonth;
+            currentMonthSatus.Items.Clear();
+            currentMonthSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListCurrentMonth.Count()}" });
 
+            foreach (var dc in WarningListCurrentMonth.Select(x => x.ModelingAuthoritySet).Distinct())
+            {
+                currentMonthSatus.Items.Add(new Separator());
+                currentMonthSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListCurrentMonth.Count(x => x.ModelingAuthoritySet == dc)}" });
+
+            }
         }
 
         private void button1_Click(object sender, RoutedEventArgs e)
@@ -124,22 +133,23 @@ namespace IMcorrectionTool
                 currentMonthSatus.Items.Add(new TextBlock() { Text = $"Загрузка файла..." });
 
                 string filePath = openFileDialog.FileName;
-                WarningListLastMonth = WarningFarm.GetWarningListFromCduFormatExcel(filePath);
-                dataGridWarningLastMonth.ItemsSource = WarningListLastMonth;
-
-                lastMonthSatus.Items.Clear();
-                lastMonthSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListLastMonth.Count()}" });
-
-                foreach (var dc in WarningListLastMonth.Select(x => x.ModelingAuthoritySet).Distinct())
-                {
-                    lastMonthSatus.Items.Add(new Separator());
-                    lastMonthSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListLastMonth.Count(x => x.ModelingAuthoritySet == dc)}" });
-
-                }
+                Task.Run(() => { WarningListLastMonth = WarningFarm.GetWarningListFromCduFormatExcel(filePath); })
+                        .ContinueWith(CallbackButton1, TaskScheduler.FromCurrentSynchronizationContext());
             }
-
         }
-
+        private void CallbackButton1(Task obj)
+        {
+            value = 0;
+            Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
+            dataGridWarningLastMonth.ItemsSource = WarningListLastMonth;
+            lastMonthSatus.Items.Clear();
+            lastMonthSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListLastMonth.Count()}" });
+            foreach (var dc in WarningListLastMonth.Select(x => x.ModelingAuthoritySet).Distinct())
+            {
+                lastMonthSatus.Items.Add(new Separator());
+                lastMonthSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListLastMonth.Count(x => x.ModelingAuthoritySet == dc)}" });
+            }
+        }
         private void button2_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -148,23 +158,27 @@ namespace IMcorrectionTool
             {
                 currentMonthSatus.Items.Clear();
                 currentMonthSatus.Items.Add(new TextBlock() { Text = $"Загрузка файла..." });
-
                 string filePath = openFileDialog.FileName;
-                WarningListKGID = WarningFarm.GetWarningListFromCK11Format(filePath);
-                dataGridWarningKGID.ItemsSource = WarningListKGID;
-
-                kgidSatus.Items.Clear();
-                kgidSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListKGID.Count()}" });
-
-                foreach (var dc in WarningListKGID.Select(x => x.ModelingAuthoritySet).Distinct())
-                {
-                    kgidSatus.Items.Add(new Separator());
-                    kgidSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListKGID.Count(x => x.ModelingAuthoritySet == dc)}" });
-
-                }
+                progressBar.Maximum = System.IO.File.ReadAllLines(filePath).Length;
+                Task.Run(() => { WarningListKGID = WarningFarm.GetWarningListFromCK11Format(filePath);})
+                        .ContinueWith(CallbackButton2, TaskScheduler.FromCurrentSynchronizationContext());
             }
         }
+        private void CallbackButton2(Task obj)
+        {
+            value = 0;
+            Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
+            dataGridWarningKGID.ItemsSource = WarningListKGID;
+            kgidSatus.Items.Clear();
+            kgidSatus.Items.Add(new TextBlock() { Text = $"Всего по ОЗ ОДУ Урала: {WarningListKGID.Count()}" });
 
+            foreach (var dc in WarningListKGID.Select(x => x.ModelingAuthoritySet).Distinct())
+            {
+                kgidSatus.Items.Add(new Separator());
+                kgidSatus.Items.Add(new TextBlock() { Text = $"{dc}: {WarningListKGID.Count(x => x.ModelingAuthoritySet == dc)}" });
+
+            }
+        }
         private void button4_Click(object sender, RoutedEventArgs e)
         {
             if (WarningListLastMonth != null && WarningListCurrentMonth != null && WarningListLastMonth.Count() > 0 && WarningListCurrentMonth.Count() > 0)
@@ -177,8 +191,7 @@ namespace IMcorrectionTool
                 MessageBox.Show("Файл текущего или прошлого месяца не выбран или не содержит записей. Перенос не выполнен.", "Ошибка");
             }
         }
-        private UpdateProgressBarDelegate updProgress;
-        private double value;
+        
         private void button5_Click(object sender, RoutedEventArgs e)
         {
             currentMonthSatus.Items.Clear();
@@ -220,9 +233,9 @@ namespace IMcorrectionTool
                         WarningListItog.Add(wrn);
                     }
                 }
-            }).ContinueWith(SetDataGrid, TaskScheduler.FromCurrentSynchronizationContext());
+            }).ContinueWith(CallbackButton5, TaskScheduler.FromCurrentSynchronizationContext());
         }
-        private void SetDataGrid(Task obj)
+        private void CallbackButton5(Task obj)
         {
             dataGridWarningItog.ItemsSource = WarningListItog;
             value = 0;
@@ -256,8 +269,14 @@ namespace IMcorrectionTool
                 try
                 {
                     var filePath = saveFileDialog.FileName;
-                    WarningFarm.SaveToExcelBasedOnCurrentMonth(CurrentMonthFileName, filePath, WarningListItog);
-                    MessageBox.Show("Сохранение успешно завершено", "Готово");
+                    progressBar.Maximum = WarningListItog.Count;
+                    Task.Run(() =>
+                    {
+                        WarningFarm.SaveToExcelBasedOnCurrentMonth(CurrentMonthFileName, filePath, WarningListItog);
+                        MessageBox.Show("Сохранение успешно завершено", "Готово");
+                        value = 0;
+                        Dispatcher.Invoke(updProgress, new object[] { ProgressBar.ValueProperty, value });
+                    });
                 }
                 catch (Exception ex)
                 {

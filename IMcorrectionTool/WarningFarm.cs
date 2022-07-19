@@ -4,9 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Drawing;
+using System.Windows.Controls;
+using System.Text.RegularExpressions;
 
 namespace IMcorrectionTool
 {
@@ -68,6 +69,7 @@ namespace IMcorrectionTool
 
             for (int i = 1; i <= lastUsedRow; i++)
             {
+                MainWindow.dispatcher.Invoke(MainWindow.updProgress, new object[] { ProgressBar.ValueProperty, ++MainWindow.value });
                 if (myvalues.GetValue(i, 1) != null && myvalues.GetValue(i, 1).ToString() == "ОДУ Урала")
                 {
                     string[] splittedLine = new string[8];
@@ -182,7 +184,6 @@ namespace IMcorrectionTool
             List<Warming> warnings = new List<Warming>();
             const Int32 BufferSize = 128;
             Encoding win1251 = Encoding.GetEncoding(1251);
-
             using (FileStream fstream = File.OpenRead(PathToCSV))
             {
                 using (var streamReader = new StreamReader(fstream, win1251, true, BufferSize))
@@ -190,6 +191,7 @@ namespace IMcorrectionTool
                     String line;
                     while ((line = streamReader.ReadLine()) != null)
                     {
+                        MainWindow.dispatcher.Invoke(MainWindow.updProgress, new object[] { ProgressBar.ValueProperty, ++MainWindow.value });
                         var splittedLine = line.Split(';');
                         if (splittedLine[9] == "ОДУ Урала" || splittedLine[9] == "Тюменское РДУ" || splittedLine[9] == "Челябинское РДУ" || splittedLine[9] == "Свердловское РДУ" || splittedLine[9] == "Пермское РДУ" || splittedLine[9] == "Оренбургское РДУ" || splittedLine[9] == "Башкирское РДУ")
                         {
@@ -197,9 +199,7 @@ namespace IMcorrectionTool
                         }
                     }
                 }
-
             }
-
             return warnings;
         }
         public static void SaveToExcelBasedOnCurrentMonth(string PathToCurrentMonth, string PathToSave, List<Warming> WarningList)
@@ -234,15 +234,25 @@ namespace IMcorrectionTool
 
             for (int i = 1; i <= lastUsedRow; i++)
             {
+                MainWindow.dispatcher.Invoke(MainWindow.updProgress, new object[] { ProgressBar.ValueProperty, ++MainWindow.value });
                 if (myvalues.GetValue(i, 1) != null && myvalues.GetValue(i, 1).ToString() == "ОДУ Урала")
                 {
-                    var id = myvalues.GetValue(i, 4).ToString() + myvalues.GetValue(i, 7).ToString();
-
+                    string resultText = myvalues.GetValue(i, 7).ToString();
+                    // Выборка строк, в которых есть id. Необходимо для ограничения количества
+                    // строк, прогоняемых через регулярное выражение, ибо оно работает очень медленно.
+                    if (myvalues.GetValue(i, 7).ToString().Contains("Id") || 
+                        myvalues.GetValue(i, 7).ToString().Contains("id") || 
+                        myvalues.GetValue(i, 7).ToString().Contains("ID"))
+                        resultText = Regex.Replace(myvalues.GetValue(i, 7).ToString(), @"\W*id\W*[0-9]*\W*", "Id=", RegexOptions.IgnoreCase).Trim();
+                    var id = myvalues.GetValue(i, 4).ToString() + resultText;
                     var wrn = WarningList.FirstOrDefault(x => x.ID == id);
                     if (wrn != null)
                     {
                         writeValues[i - 1, 0] = wrn.PreviousComment;
-                        if (!string.IsNullOrEmpty(wrn.Comment)) writeValues[i - 1, 0] = wrn.Comment;
+                        if (!string.IsNullOrEmpty(wrn.Comment))
+                            writeValues[i - 1, 0] = wrn.Comment;
+                        if (wrn.Comment != "Устранено" && wrn.IsNewInMonth == false)
+                            xlWorksheet.get_Range("A" + (i).ToString(), "H" + (i).ToString()).Interior.Color = ColorTranslator.ToOle(Color.Plum);
                     }
                 }
             }
@@ -252,6 +262,7 @@ namespace IMcorrectionTool
 
             for (int i = 1; i <= newWarnings.Count(); i++)
             {
+                MainWindow.dispatcher.Invoke(MainWindow.updProgress, new object[] { ProgressBar.ValueProperty, ++MainWindow.value });
                 xlWorksheet.Cells[i + lastUsedRow, 1].Value2 = newWarnings[i - 1].ODU;
                 xlWorksheet.Cells[i + lastUsedRow, 2].Value2 = newWarnings[i - 1].ModelingAuthoritySet;
                 xlWorksheet.Cells[i + lastUsedRow, 3].Value2 = newWarnings[i - 1].RuleID;
@@ -266,9 +277,10 @@ namespace IMcorrectionTool
                 }
 
 
-                xlWorksheet.get_Range("A" + (i + lastUsedRow).ToString(), "H" + (i + lastUsedRow).ToString()).Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Yellow);
+                xlWorksheet.get_Range("A" + (i + lastUsedRow).ToString(), "H" + (i + lastUsedRow).ToString()).Interior.Color = ColorTranslator.ToOle(Color.Yellow);
             }
 
+            xlWorksheet.get_Range("A1", "H" + (lastUsedRow + newWarnings.Count).ToString()).Cells.Borders.LineStyle = Excel.XlLineStyle.xlContinuous;
 
             //for (int i = 1; i <= lastUsedRow; i++)
             //{
@@ -343,7 +355,7 @@ namespace IMcorrectionTool
             Marshal.ReleaseComObject(xlApp);
 
 
-
+            
 
         }
     }

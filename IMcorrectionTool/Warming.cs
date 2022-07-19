@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 
 namespace IMcorrectionTool
 {
@@ -16,8 +11,8 @@ namespace IMcorrectionTool
                 string resultText = WarningText;
                 // Выборка строк, в которых есть id. Необходимо для ограничения количества
                 // строк, прогоняемых через регулярное выражение, ибо оно работает очень медленно.
-                if (WarningText.Contains("id"))
-                    resultText = Regex.Replace(WarningText, @"\w*id\W*[0-9]*", "Id=", RegexOptions.IgnoreCase).Trim();
+                if (WarningText.Contains("Id") || WarningText.Contains("id") || WarningText.Contains("ID"))
+                    resultText = Regex.Replace(WarningText, @"\W*id\W*[0-9]*\W*", "Id=", RegexOptions.IgnoreCase).Trim();
                 return ObjectUID + resultText;
             }
         }
